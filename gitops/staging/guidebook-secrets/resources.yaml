@@ -1,0 +1,39 @@
+apiVersion: external-secrets.io/v1
+kind: SecretStore
+metadata:
+  name: aws-secrets-manager
+  namespace: guidebook
+spec:
+  provider:
+    aws:
+      service: SecretsManager
+      region: ap-northeast-2
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: ghcr-pull
+  namespace: guidebook
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-secrets-manager
+    kind: SecretStore
+  target:
+    name: ghcr-pull
+    creationPolicy: Owner
+    template:
+      engineVersion: v2
+      type: kubernetes.io/dockerconfigjson
+      data:
+        .dockerconfigjson: >-
+          {{ dict "auths" (dict "ghcr.io" (dict "auth" (printf "%s:%s" .username .password | b64enc))) | toJson }}
+  data:
+    - secretKey: username
+      remoteRef:
+        key: kgb-staging/ghcr
+        property: username
+    - secretKey: password
+      remoteRef:
+        key: kgb-staging/ghcr
+        property: password

@@ -1,0 +1,5 @@
+apiVersion: v2
+name: guidebook
+description: KGB 가이드북·관광·지도·알림 API
+type: application
+version: 0.1.0
