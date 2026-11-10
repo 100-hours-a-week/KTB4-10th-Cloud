@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: auth
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: guidebook
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kgb-worker
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kgb-ops
