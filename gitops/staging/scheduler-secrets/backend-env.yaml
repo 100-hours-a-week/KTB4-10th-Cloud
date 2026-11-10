@@ -1,0 +1,71 @@
+apiVersion: external-secrets.io/v1
+kind: SecretStore
+metadata:
+  name: aws-parameter-store
+  namespace: kgb-ops
+spec:
+  provider:
+    aws:
+      service: ParameterStore
+      region: ap-northeast-2
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: scheduler-backend-env
+  namespace: kgb-ops
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-parameter-store
+    kind: SecretStore
+  target:
+    name: scheduler-backend-env
+    creationPolicy: Owner
+  data:
+    - secretKey: DB_URL
+      remoteRef:
+        key: /kgb-staging/backend/DB_URL
+    - secretKey: DB_USERNAME
+      remoteRef:
+        key: /kgb-staging/backend/DB_USERNAME
+    - secretKey: REDIS_HOST
+      remoteRef:
+        key: /kgb-staging/backend/REDIS_HOST
+    - secretKey: AI_SERVER_BASE_URL
+      remoteRef:
+        key: /kgb-staging/backend/AI_SERVER_BASE_URL
+    - secretKey: TOUR_API_SNAPSHOT_LOCATION
+      remoteRef:
+        key: /kgb-staging/backend/TOUR_API_SNAPSHOT_LOCATION
+    - secretKey: DB_PASSWORD
+      remoteRef:
+        key: /kgb-staging/backend/DB_PASSWORD
+    - secretKey: KAKAO_REST_API_KEY
+      remoteRef:
+        key: /kgb-staging/backend/KAKAO_REST_API_KEY
+    - secretKey: KAKAO_CLIENT_SECRET
+      remoteRef:
+        key: /kgb-staging/backend/KAKAO_CLIENT_SECRET
+    - secretKey: KAKAO_ADMIN_KEY
+      remoteRef:
+        key: /kgb-staging/backend/KAKAO_ADMIN_KEY
+    - secretKey: COUPON_CODE
+      remoteRef:
+        key: /kgb-staging/backend/COUPON_CODE
+    - secretKey: TOUR_API_SERVICE_KEY
+      remoteRef:
+        key: /kgb-staging/backend/TOUR_API_SERVICE_KEY
+    - secretKey: WEB_PUSH_VAPID_PRIVATE_KEY
+      remoteRef:
+        key: /kgb-staging/backend/WEB_PUSH_VAPID_PRIVATE_KEY
+    - secretKey: AI_CALLBACK_TOKEN
+      remoteRef:
+        key: /kgb-staging/shared/AI_CALLBACK_TOKEN
+    - secretKey: REDIS_PASSWORD
+      remoteRef:
+        key: kgb-staging/redis/auth-token
+      sourceRef:
+        storeRef:
+          name: aws-secrets-manager
+          kind: SecretStore

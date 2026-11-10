@@ -1,0 +1,5 @@
+apiVersion: v2
+name: tourapi-scheduler
+description: KGB TourAPI 관광데이터 정기 수집 스케줄러
+type: application
+version: 0.1.0
