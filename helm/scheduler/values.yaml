@@ -7,7 +7,7 @@ serviceAccount:
   name: tourapi-scheduler
 image:
   repository: ghcr.io/100-hours-a-week/ktb4-10-be
-  tag: stag-8db9b86-20261108
+  tag: stag-e5d0abf-20261110
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
@@ -41,6 +41,7 @@ probes:
     failureThreshold: 3
 
 env:
+  MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
   SPRING_PROFILES_ACTIVE: "prod"
   REDIS_SSL_ENABLED: "true"
   REDIS_SESSION_NAMESPACE: "kgb:staging:oauth:session"
