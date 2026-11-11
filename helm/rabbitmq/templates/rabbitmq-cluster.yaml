@@ -1,0 +1,51 @@
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: {{ .Values.name }}
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: kgb
+spec:
+  replicas: {{ .Values.replicas }}
+  {{- with .Values.image }}
+  image: {{ . | quote }}
+  {{- end }}
+  resources:
+    {{- toYaml .Values.resources | nindent 4 }}
+  persistence:
+    storageClassName: {{ .Values.persistence.storageClassName }}
+    storage: {{ .Values.persistence.storage }}
+  service:
+    type: {{ .Values.service.type }}
+  {{- if .Values.scheduling.spreadAcrossNodes }}
+  # operator가 RabbitMQ 파드에 붙이는 라벨: app.kubernetes.io/name=<RabbitmqCluster 이름>
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ .Values.name }}
+  {{- end }}
+  {{- if .Values.scheduling.spreadAcrossZones }}
+  override:
+    statefulSet:
+      spec:
+        template:
+          spec:
+            # CRD 스키마상 PodSpec의 containers가 필수라 빈 배열을 넣음 (operator 공식 예시와 동일)
+            containers: []
+            topologySpreadConstraints:
+              - maxSkew: 1
+                topologyKey: topology.kubernetes.io/zone
+                whenUnsatisfiable: ScheduleAnyway
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: {{ .Values.name }}
+  {{- end }}
+  {{- with .Values.additionalConfig }}
+  rabbitmq:
+    additionalConfig: |
+      {{- . | nindent 6 }}
+  {{- end }}
