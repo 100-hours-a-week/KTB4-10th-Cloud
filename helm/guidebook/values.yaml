@@ -66,6 +66,11 @@ env:
   OAUTH_FAILURE_REDIRECT_URI: "https://d3d0bke776h5r6.cloudfront.net/auth/error"
   CORS_ALLOWED_ORIGINS: "https://d3d0bke776h5r6.cloudfront.net"
   WEB_PUSH_VAPID_SUBJECT: "https://d3d0bke776h5r6.cloudfront.net/"
+  SPRING_RABBITMQ_HOST: "rabbitmq.rabbitmq.svc.cluster.local"
+  SPRING_RABBITMQ_PORT: "5672"
+  AI_GENERATION_RABBIT_MAX_QUEUE_LENGTH: "10000"
+  AI_GENERATION_RABBIT_RETRY_DELAY: "30s"
+  AI_GENERATION_OUTBOX_ENABLED: "false"
 
 envFrom:
   - secretRef:

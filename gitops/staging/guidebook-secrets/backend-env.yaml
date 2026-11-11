@@ -62,6 +62,12 @@ spec:
     - secretKey: AI_CALLBACK_TOKEN
       remoteRef:
         key: /kgb-staging/shared/AI_CALLBACK_TOKEN
+    - secretKey: SPRING_RABBITMQ_USERNAME
+      remoteRef:
+        key: /kgb-staging/backend/SPRING_RABBITMQ_USERNAME
+    - secretKey: SPRING_RABBITMQ_PASSWORD
+      remoteRef:
+        key: /kgb-staging/backend/SPRING_RABBITMQ_PASSWORD
     - secretKey: REDIS_PASSWORD
       remoteRef:
         key: kgb-staging/redis/auth-token
