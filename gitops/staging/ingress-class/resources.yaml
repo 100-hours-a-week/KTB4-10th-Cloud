@@ -1,0 +1,32 @@
+apiVersion: eks.amazonaws.com/v1
+kind: IngressClassParams
+metadata:
+  name: kgb-staging-alb
+spec:
+  scheme: internet-facing
+  targetType: ip
+  group:
+    name: kgb-staging-backend
+  subnets:
+    ids:
+      - subnet-0d8c2f44a9130c469
+      - subnet-048de82b94a696aab
+  certificateARNs:
+    - arn:aws:acm:ap-northeast-2:742875367096:certificate/03cd2298-cab8-415c-98a3-23c58fedb790
+  sslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
+  loadBalancerAttributes:
+    - key: idle_timeout.timeout_seconds
+      value: "60"
+    - key: client_keep_alive.seconds
+      value: "3600"
+---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: kgb-staging-alb
+spec:
+  controller: eks.amazonaws.com/alb
+  parameters:
+    apiGroup: eks.amazonaws.com
+    kind: IngressClassParams
+    name: kgb-staging-alb
