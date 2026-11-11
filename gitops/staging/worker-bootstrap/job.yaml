@@ -1,0 +1,58 @@
+# One-time bootstrap before the first Worker deployment.
+# Matches BE GenerationRabbitConfiguration; never publish test generation requests.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kgb-worker-mq-bootstrap
+  namespace: kgb-worker
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 180
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: bootstrap
+          image: ghcr.io/100-hours-a-week/ktb4-10-ai:stag-69c3396-20261111
+          command: [/app/.venv/bin/python, -c]
+          args:
+            - |
+              import asyncio, os
+              import aio_pika
+              async def main():
+                  connection = await asyncio.wait_for(aio_pika.connect(os.environ['RABBITMQ_URL']), 20)
+                  async with connection:
+                      channel = await connection.channel()
+                      ex = await channel.declare_exchange('guidebook.generation.exchange', 'direct', durable=True)
+                      retry = await channel.declare_exchange('guidebook.generation.retry.exchange', 'direct', durable=True)
+                      dlx = await channel.declare_exchange('guidebook.generation.dlx', 'direct', durable=True)
+                      common = {'x-queue-type': 'quorum', 'x-max-length': 10000, 'x-overflow': 'reject-publish', 'x-dead-letter-strategy': 'at-least-once'}
+                      work = await channel.declare_queue('guidebook.generation', durable=True, arguments={**common, 'x-dead-letter-exchange': retry.name, 'x-dead-letter-routing-key': 'guidebook.generation.retry'})
+                      delayed = await channel.declare_queue('guidebook.generation.retry', durable=True, arguments={**common, 'x-message-ttl': 30000, 'x-dead-letter-exchange': ex.name, 'x-dead-letter-routing-key': 'guidebook.generation'})
+                      failed = await channel.declare_queue('guidebook.generation.dlq', durable=True, arguments={'x-queue-type': 'quorum'})
+                      await work.bind(ex, 'guidebook.generation')
+                      await delayed.bind(retry, 'guidebook.generation.retry')
+                      await failed.bind(dlx, 'guidebook.generation.failed')
+                      print('MQ authentication, vhost and backend-compatible topology verified.', flush=True)
+              try:
+                  asyncio.run(main())
+              except Exception as exc:
+                  # Never include the AMQP URL or credentials in logs.
+                  print('MQ bootstrap failed: ' + type(exc).__name__, flush=True)
+                  raise SystemExit(1)
+          env:
+            - name: RABBITMQ_URL
+              valueFrom:
+                secretKeyRef:
+                  name: worker-env
+                  key: RABBITMQ_URL
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              memory: 256Mi

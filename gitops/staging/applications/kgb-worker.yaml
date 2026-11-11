@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kgb-worker
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: ssh://git@ssh.github.com:443/100-hours-a-week/KTB4-10th-Cloud.git
+    targetRevision: main
+    path: helm/worker
+    helm:
+      releaseName: kgb-worker
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kgb-worker
+  # Sync after the chart is pushed and the broker topology is ready.
+  syncPolicy: {}

@@ -1,0 +1,49 @@
+apiVersion: external-secrets.io/v1
+kind: SecretStore
+metadata:
+  name: aws-parameter-store
+  namespace: kgb-worker
+spec:
+  provider:
+    aws:
+      service: ParameterStore
+      region: ap-northeast-2
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: worker-env
+  namespace: kgb-worker
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-parameter-store
+    kind: SecretStore
+  target:
+    name: worker-env
+    creationPolicy: Owner
+  data:
+    - secretKey: ANTHROPIC_API_KEY
+      remoteRef:
+        key: /kgb-staging/ai/ANTHROPIC_API_KEY
+    - secretKey: VLLM_BASE_URL
+      remoteRef:
+        key: /kgb-staging/ai/VLLM_BASE_URL
+    - secretKey: VLLM_API_KEY
+      remoteRef:
+        key: /kgb-staging/ai/VLLM_API_KEY
+    - secretKey: LLM_MODE
+      remoteRef:
+        key: /kgb-staging/ai/LLM_MODE
+    - secretKey: LANGFUSE_PUBLIC_KEY
+      remoteRef:
+        key: /kgb-staging/ai/LANGFUSE_PUBLIC_KEY
+    - secretKey: LANGFUSE_SECRET_KEY
+      remoteRef:
+        key: /kgb-staging/ai/LANGFUSE_SECRET_KEY
+    - secretKey: AI_CALLBACK_TOKEN
+      remoteRef:
+        key: /kgb-staging/shared/AI_CALLBACK_TOKEN
+    - secretKey: RABBITMQ_URL
+      remoteRef:
+        key: /kgb-staging/ai/RABBITMQ_URL
