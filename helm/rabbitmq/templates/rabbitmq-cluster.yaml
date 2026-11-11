@@ -18,15 +18,37 @@ spec:
     storage: {{ .Values.persistence.storage }}
   service:
     type: {{ .Values.service.type }}
-  {{- if .Values.scheduling.spreadAcrossNodes }}
-  # operator가 RabbitMQ 파드에 붙이는 라벨: app.kubernetes.io/name=<RabbitmqCluster 이름>
+  {{- $pool := .Values.scheduling.dedicatedNodePool }}
+  {{- if $pool }}
+  # 전용 NodePool의 taint 허용
+  tolerations:
+    - key: {{ $pool.labelKey }}
+      operator: Equal
+      value: {{ $pool.labelValue | quote }}
+      effect: NoSchedule
+  {{- end }}
+  {{- if or $pool .Values.scheduling.spreadAcrossNodes }}
   affinity:
+    {{- if $pool }}
+    # 전용 NodePool 노드에만 배치
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: {{ $pool.labelKey }}
+                operator: In
+                values:
+                  - {{ $pool.labelValue | quote }}
+    {{- end }}
+    {{- if .Values.scheduling.spreadAcrossNodes }}
+    # 같은 노드에 브로커 2개 금지
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
         - topologyKey: kubernetes.io/hostname
           labelSelector:
             matchLabels:
               app.kubernetes.io/name: {{ .Values.name }}
+    {{- end }}
   {{- end }}
   {{- if .Values.scheduling.spreadAcrossZones }}
   override:
