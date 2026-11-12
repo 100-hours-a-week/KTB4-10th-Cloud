@@ -65,10 +65,10 @@ spec:
   data:
     - secretKey: DB_URL
       remoteRef:
-        key: /kgb-staging/backend/DB_URL
+        key: /kgb-prod/backend/DB_URL
     - secretKey: DB_USERNAME
       remoteRef:
-        key: /kgb-staging/backend/DB_USERNAME
+        key: /kgb-prod/backend/DB_USERNAME
     - secretKey: REDIS_HOST
       remoteRef:
         key: /kgb-staging/backend/REDIS_HOST
@@ -80,16 +80,16 @@ spec:
         key: /kgb-staging/backend/TOUR_API_SNAPSHOT_LOCATION
     - secretKey: DB_PASSWORD
       remoteRef:
-        key: /kgb-staging/backend/DB_PASSWORD
+        key: /kgb-prod/backend/DB_PASSWORD
     - secretKey: KAKAO_REST_API_KEY
       remoteRef:
-        key: /kgb-staging/backend/KAKAO_REST_API_KEY
+        key: /kgb-prod/backend/KAKAO_REST_API_KEY
     - secretKey: KAKAO_CLIENT_SECRET
       remoteRef:
-        key: /kgb-staging/backend/KAKAO_CLIENT_SECRET
+        key: /kgb-prod/backend/KAKAO_CLIENT_SECRET
     - secretKey: KAKAO_ADMIN_KEY
       remoteRef:
-        key: /kgb-staging/backend/KAKAO_ADMIN_KEY
+        key: /kgb-prod/backend/KAKAO_ADMIN_KEY
     - secretKey: COUPON_CODE
       remoteRef:
         key: /kgb-staging/backend/COUPON_CODE
