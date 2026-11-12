@@ -10,10 +10,10 @@ imagePullSecrets:
 
 resources:
   requests:
-    cpu: 200m
+    cpu: 500m
     memory: 1Gi
   limits:
-    cpu: 750m
+    cpu: 1000m
     memory: 1280Mi
 
 ports:
@@ -114,7 +114,7 @@ autoscaling:
   enabled: true
   minReplicas: 2
   maxReplicas: 3
-  targetCPUUtilizationPercentage: 200
+  targetCPUUtilizationPercentage: 80
   behavior:
     scaleUp:
       stabilizationWindowSeconds: 0
