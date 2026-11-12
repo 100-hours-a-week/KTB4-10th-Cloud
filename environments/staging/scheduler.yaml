@@ -7,7 +7,7 @@ serviceAccount:
   name: tourapi-scheduler
 image:
   repository: ghcr.io/100-hours-a-week/ktb4-10-be
-  tag: stag-59fe3ff-20261112
+  tag: stag-277bd55-20261112
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
