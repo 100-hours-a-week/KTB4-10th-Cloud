@@ -13,23 +13,21 @@ gitops/staging/                  # 스테이징 ESO·인프라·Argo CD 설정
 Argo CD source.path는 helm/auth, helm.valueFiles는 ../../environments/staging/auth.yaml입니다.
 값 파일은 chart 디렉토리 기준 상대 경로입니다. 두 환경은 main을 읽되 클러스터와 값 파일이 다릅니다.
 
-## 무중단 참조 전환 순서
+## 관리 기준
 
-1. BE의 환경별 경로 지원 CI 변경을 먼저 dev에 병합합니다. 환경 폴더가 없는 동안은 기존 경로로 동작합니다.
-2. 이 저장소의 environments 및 gitops/staging/applications 변경을 main에 커밋·푸시합니다.
-3. 라이브 Application에 새 source 참조를 연결합니다. 현재 Auto Sync·Manual 정책은 보존했습니다.
-   `kubectl --kubeconfig "$HOME/.kube/kgb-v3staging-ayden" --context kgb-v3staging-ayden apply -f gitops/staging/applications/`
-4. Argo CD가 main과 environments/staging 값을 읽는지, 이미지 태그·환경변수·리소스·ALB 설정이 이전과 같은지 검증합니다.
-5. 이후 스테이징 설정은 environments/staging에서 수정합니다.
+- Helm Application은 main의 environments/staging/<chart>.yaml을 읽도록 전환했습니다.
+- 스테이징 설정 변경은 이 환경 파일에서 합니다. helm/*/values.yaml에는 공통 기본값만 둡니다.
+- 백엔드 CI는 environments/staging/{auth,guidebook,scheduler}.yaml의 image.tag만 갱신합니다.
+- 배포 설정의 변경 이력은 같은 main 브랜치에서 환경 디렉토리별로 관리합니다.
+- helm lint/template 명령에도 -f 환경 파일을 지정합니다. 백엔드·Worker는 환경별 이미지 태그 없이 렌더링할 수 없습니다.
+- Secret 값은 Git에 저장하지 않고 gitops/<환경>의 ExternalSecret에서 AWS 원본 경로만 참조합니다.
+- 운영 설정을 준비할 때 스테이징 값을 통째로 복사하지 않고 운영 도메인·인증서·AWS 경로·리소스 등을 검토합니다.
+- 현재 운영 디렉토리는 준비 경로이며 실제 운영 values는 아직 작성하지 않았습니다.
 
-## 이행 기간의 기존 values.yaml
+## 이번 정리 반영 순서
 
-helm/*/values.yaml은 기존 Application과 CI가 끊기지 않도록 이번 변경에서는 그대로 남겼습니다.
-전환 중 이미지 태그는 새 CI가 환경 값과 기존 값 모두 갱신합니다. 운영 디렉토리는 갱신하지 않습니다.
-이 파일의 스테이징 설정을 운영 기본값으로 사용하면 안 됩니다. 운영은 별도 값 파일의 모든 환경 설정을 검토해야 합니다.
-모든 Application 참조 전환 후 기존 values를 공통 기본값으로 정리하는 후속 변경이 필요합니다.
-그때 env 빈 맵 병합으로 남는 설정이 없도록 이전 스테이징 env·Ingress 값도 제거하고 렌더링을 비교합니다.
-기존 namespaces.yaml 역시 호환용으로 남기고 환경별 namespace 관리는 environments 아래로 전환합니다.
+1. BE의 기존 chart values 미러 갱신 제거를 dev에 먼저 병합합니다.
+2. Cloud의 공통 values 정리 변경을 main에 푸시합니다.
+3. Argo CD가 환경별 값을 사용해 이전과 같은 리소스를 렌더링하는지 확인합니다.
 
-Secret 값은 저장하지 않고 gitops/<환경>의 ExternalSecret에서 AWS 원본 경로만 참조합니다.
-스테이징 변경을 통째로 운영으로 복사하지 않고 검증한 이미지와 필요한 설정을 운영 값에 반영합니다.
+기존 namespaces.yaml은 별도 namespace 관리 전환 전까지 호환용으로 유지합니다.

@@ -1,70 +1,36 @@
+# Shared defaults only. Supply environments/<environment>/scheduler.yaml with -f.
+---
 replicaCount: 1
-
 strategy:
   type: Recreate
-
 serviceAccount:
   name: tourapi-scheduler
 image:
   repository: ghcr.io/100-hours-a-week/ktb4-10-be
-  tag: stag-59fe3ff-20261112
+  tag: ''
   pullPolicy: IfNotPresent
-
 imagePullSecrets:
-  - name: ghcr-pull
-
-resources:
-  requests:
-    cpu: 1250m
-    memory: 1Gi
-  limits:
-    memory: 1280Mi
-
+- name: ghcr-pull
+resources: {}
 ports:
   http: 8080
   management: 8081
-
 probes:
   startup:
     httpGet:
-      path: /actuator/health/liveness
+      path: "/actuator/health/liveness"
       port: management
     periodSeconds: 5
     timeoutSeconds: 2
     failureThreshold: 24
   liveness:
     httpGet:
-      path: /actuator/health/liveness
+      path: "/actuator/health/liveness"
       port: management
     periodSeconds: 10
     timeoutSeconds: 2
     failureThreshold: 3
-
-env:
-  MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
-  SPRING_PROFILES_ACTIVE: "prod"
-  REDIS_SSL_ENABLED: "true"
-  REDIS_SESSION_NAMESPACE: "kgb:staging:oauth:session"
-  NOTIFICATION_REDIS_CHANNEL: "kgb:staging:notification:sse"
-  TOUR_API_SCHEDULER_ENABLED: "true"
-  MAP_COMMON_CACHE_PRELOAD_ENABLED: "false"
-  REDIS_COMMAND_TIMEOUT: "2s"
-  REDIS_PORT: "6379"
-  NOTIFICATION_REDIS_ENABLED: "true"
-  REDIS_CONNECT_TIMEOUT: "2s"
-  COUPON_CREDIT_AMOUNT: "5"
-  AWS_REGION: "ap-northeast-2"
-  SESSION_COOKIE_SECURE: "true"
-  WEB_PUSH_VAPID_PUBLIC_KEY: "BNZ3naXJsQwUgRjK5S1RMQP00mDtF_SBpTDXya5FdleUIJ2SDU2F32AYvYtcYr-BGKNWbA08MYzB0VGfxw7HXcM"
-  AI_SERVER_READ_TIMEOUT: "10s"
-  AI_SERVER_CONNECT_TIMEOUT: "3s"
-  COUPON_ATTEMPT_REDIS_NAMESPACE: "kgb:staging:coupon:attempt"
-  KAKAO_REDIRECT_URI: "https://d3d0bke776h5r6.cloudfront.net/api/v1/auth/oauth/callback/kakao"
-  OAUTH_SUCCESS_REDIRECT_URI: "https://d3d0bke776h5r6.cloudfront.net/auth/complete"
-  OAUTH_FAILURE_REDIRECT_URI: "https://d3d0bke776h5r6.cloudfront.net/auth/error"
-  CORS_ALLOWED_ORIGINS: "https://d3d0bke776h5r6.cloudfront.net"
-  WEB_PUSH_VAPID_SUBJECT: "https://d3d0bke776h5r6.cloudfront.net/"
-
+env: {}
 envFrom:
-  - secretRef:
-      name: scheduler-backend-env
+- secretRef:
+    name: scheduler-backend-env
