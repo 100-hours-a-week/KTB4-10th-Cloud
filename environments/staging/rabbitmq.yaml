@@ -1,0 +1,41 @@
+name: rabbitmq
+
+replicas: 3
+
+image: rabbitmq:4.3.4-management
+
+resources:
+  requests:
+    cpu: "1"
+    memory: 2Gi
+  limits:
+    memory: 2Gi
+
+persistence:
+  storageClassName: auto-gp3-ebs-sc
+  storage: 10Gi
+
+service:
+  type: ClusterIP
+
+# 파드 배치
+scheduling:
+  # 전용 NodePool에만 배치
+  dedicatedNodePool:
+    labelKey: kgb.io/workload
+    labelValue: rabbitmq
+  # 같은 노드에 RabbitMQ 파드 2개 이상 금지 (hard)
+  spreadAcrossNodes: true
+  # AZ 간 고르게 분산 (soft: AZ가 부족하면 그래도 스케줄)
+  spreadAcrossZones: true
+
+# 노드 교체 시 브로커가 한 번에 1개만 내려가도록 제한
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 1
+
+# rabbitmq.conf에 추가할 설정
+additionalConfig: |
+  log.console.level = info
+  # 네트워크 분할 시 소수 쪽 노드를 일시정지 (3노드 권장값, operator production 예시)
+  cluster_partition_handling = pause_minority

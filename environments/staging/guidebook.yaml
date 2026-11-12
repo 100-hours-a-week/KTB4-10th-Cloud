@@ -1,0 +1,110 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/100-hours-a-week/ktb4-10-be
+  tag: stag-8a7ca49-20261111
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: ghcr-pull
+
+resources:
+  requests:
+    cpu: 1250m
+    memory: 1Gi
+  limits:
+    memory: 1280Mi
+
+ports:
+  http: 8080
+  management: 8081
+
+probes:
+  startup:
+    httpGet:
+      path: /actuator/health/liveness
+      port: management
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 24
+  readiness:
+    httpGet:
+      path: /actuator/health/readiness
+      port: management
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 3
+  liveness:
+    httpGet:
+      path: /actuator/health/liveness
+      port: management
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+
+env:
+  MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
+  SPRING_PROFILES_ACTIVE: "prod"
+  REDIS_SSL_ENABLED: "true"
+  REDIS_SESSION_NAMESPACE: "kgb:staging:oauth:session"
+  NOTIFICATION_REDIS_CHANNEL: "kgb:staging:notification:sse"
+  TOUR_API_SCHEDULER_ENABLED: "false"
+  MAP_COMMON_CACHE_PRELOAD_ENABLED: "true"
+  REDIS_COMMAND_TIMEOUT: "2s"
+  REDIS_PORT: "6379"
+  NOTIFICATION_REDIS_ENABLED: "true"
+  REDIS_CONNECT_TIMEOUT: "2s"
+  COUPON_CREDIT_AMOUNT: "5"
+  AWS_REGION: "ap-northeast-2"
+  SESSION_COOKIE_SECURE: "true"
+  WEB_PUSH_VAPID_PUBLIC_KEY: "BNZ3naXJsQwUgRjK5S1RMQP00mDtF_SBpTDXya5FdleUIJ2SDU2F32AYvYtcYr-BGKNWbA08MYzB0VGfxw7HXcM"
+  AI_SERVER_READ_TIMEOUT: "10s"
+  AI_SERVER_CONNECT_TIMEOUT: "3s"
+  COUPON_ATTEMPT_REDIS_NAMESPACE: "kgb:staging:coupon:attempt"
+  KAKAO_REDIRECT_URI: "https://d3d0bke776h5r6.cloudfront.net/api/v1/auth/oauth/callback/kakao"
+  OAUTH_SUCCESS_REDIRECT_URI: "https://d3d0bke776h5r6.cloudfront.net/auth/complete"
+  OAUTH_FAILURE_REDIRECT_URI: "https://d3d0bke776h5r6.cloudfront.net/auth/error"
+  CORS_ALLOWED_ORIGINS: "https://d3d0bke776h5r6.cloudfront.net"
+  WEB_PUSH_VAPID_SUBJECT: "https://d3d0bke776h5r6.cloudfront.net/"
+  SPRING_RABBITMQ_HOST: "rabbitmq.rabbitmq.svc.cluster.local"
+  SPRING_RABBITMQ_PORT: "5672"
+  SPRING_RABBITMQ_VIRTUAL_HOST: "/"
+  AI_GENERATION_RABBIT_MAX_QUEUE_LENGTH: "10000"
+  AI_GENERATION_RABBIT_RETRY_DELAY: "30s"
+  AI_GENERATION_OUTBOX_ENABLED: "true"
+
+envFrom:
+  - secretRef:
+      name: guidebook-backend-env
+
+ingress:
+  enabled: true
+  className: kgb-staging-alb
+  annotations:
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/backend-protocol: "HTTP"
+    alb.ingress.kubernetes.io/healthcheck-protocol: "HTTP"
+    alb.ingress.kubernetes.io/healthcheck-port: "8081"
+    alb.ingress.kubernetes.io/healthcheck-path: /actuator/health
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "3"
+    alb.ingress.kubernetes.io/success-codes: "200"
+  paths:
+    - path: /api/v1/guidebooks
+      pathType: Prefix
+    - path: /api/v1/guidebook-generations
+      pathType: Prefix
+    - path: /api/v1/credits
+      pathType: Prefix
+    - path: /api/v1/events
+      pathType: Prefix
+    - path: /api/v1/notifications
+      pathType: Prefix
+    - path: /api/v1/contents
+      pathType: Prefix
+    - path: /api/v1/map
+      pathType: Prefix
+    - path: /api/v1/push
+      pathType: Prefix

@@ -1,0 +1,23 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: guidebook
+  namespace: argocd
+spec:
+  destination:
+    namespace: guidebook
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: helm/guidebook
+    repoURL: ssh://git@ssh.github.com:443/100-hours-a-week/KTB4-10th-Cloud.git
+    targetRevision: main
+    helm:
+      valueFiles:
+      - "../../environments/staging/guidebook.yaml"
+  syncPolicy:
+    automated:
+      enabled: true
+      prune: false
+      selfHeal: false

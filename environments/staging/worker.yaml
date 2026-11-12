@@ -1,0 +1,61 @@
+replicaCount: 1
+image:
+  repository: ghcr.io/100-hours-a-week/ktb4-10-ai
+  tag: stag-69c3396-20261111
+  pullPolicy: IfNotPresent
+imagePullSecrets:
+  - name: ghcr-pull
+strategy:
+  type: Recreate
+# Jobs have a 600-second timeout. Allow callback and shutdown time as well.
+terminationGracePeriodSeconds: 660
+ports:
+  http: 8000
+# ECS AI container limit: 1024 MiB, with no CPU cap.
+# Reserve the same memory in EKS; CPU requests can be sized after measurement.
+resources:
+  requests:
+    memory: 1Gi
+  limits:
+    memory: 1Gi
+env:
+  SAVE_MODE: "OFF"
+  JOB_WORKERS: "30"
+  LLM_WRITE_BACKEND: "vllm"
+  VLLM_MODEL: "kgb-writer"
+  FAKE_LLM_DELAY_SEC: "50"
+  BE_CALLBACK_BASE_URL: "http://guidebook.guidebook.svc.cluster.local:8080"
+  LANGFUSE_BASE_URL: "https://jp.cloud.langfuse.com"
+  LANGFUSE_TRACING_ENVIRONMENT: "staging"
+  LANGFUSE_TRACING_ENABLED: ""
+envFrom:
+  - secretRef:
+      name: worker-env
+# RabbitMQ credentials are synchronized by ESO.
+rabbitmq:
+  secretName: worker-env
+  secretKey: RABBITMQ_URL
+# /health returns 200 even if MQ disconnects after startup.
+# Check its mq=connected field separately when verifying the deployment.
+probes:
+  startup:
+    httpGet:
+      path: /health
+      port: http
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 60
+  readiness:
+    httpGet:
+      path: /health
+      port: http
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 3
+  liveness:
+    httpGet:
+      path: /health
+      port: http
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3

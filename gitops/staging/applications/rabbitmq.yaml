@@ -1,0 +1,29 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rabbitmq
+  namespace: argocd
+spec:
+  destination:
+    namespace: rabbitmq
+    server: https://kubernetes.default.svc
+  ignoreDifferences:
+  - group: rabbitmq.com
+    jqPathExpressions:
+    - ".spec.delayStartSeconds"
+    - ".spec.terminationGracePeriodSeconds"
+    - ".spec.secretBackend"
+    - ".spec.tls"
+    kind: RabbitmqCluster
+  project: default
+  source:
+    path: helm/rabbitmq
+    repoURL: ssh://git@ssh.github.com:443/100-hours-a-week/KTB4-10th-Cloud.git
+    targetRevision: main
+    helm:
+      valueFiles:
+      - "../../environments/staging/rabbitmq.yaml"
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
