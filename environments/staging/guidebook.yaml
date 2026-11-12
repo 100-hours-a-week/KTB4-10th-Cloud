@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/100-hours-a-week/ktb4-10-be
-  tag: stag-8a7ca49-20261111
+  tag: stag-59fe3ff-20261112
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
