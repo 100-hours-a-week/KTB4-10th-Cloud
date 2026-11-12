@@ -16,7 +16,16 @@ spec:
     helm:
       valueFiles:
       - "../../environments/staging/guidebook.yaml"
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: guidebook
+      namespace: guidebook
+      jsonPointers:
+        - /spec/replicas
   syncPolicy:
+    syncOptions:
+      - RespectIgnoreDifferences=true
     automated:
       enabled: true
       prune: false

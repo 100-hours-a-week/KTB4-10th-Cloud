@@ -60,3 +60,22 @@ ingress:
     pathType: Prefix
   - path: "/api/v1/policies"
     pathType: Prefix
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 100
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 30
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60

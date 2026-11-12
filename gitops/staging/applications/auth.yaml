@@ -16,7 +16,16 @@ spec:
     helm:
       valueFiles:
       - "../../environments/staging/auth.yaml"
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: auth
+      namespace: auth
+      jsonPointers:
+        - /spec/replicas
   syncPolicy:
+    syncOptions:
+      - RespectIgnoreDifferences=true
     automated:
       enabled: true
       prune: false

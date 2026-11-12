@@ -1,4 +1,4 @@
-replicaCount: 1
+replicaCount: 2
 
 image:
   repository: ghcr.io/100-hours-a-week/ktb4-10-be
@@ -10,9 +10,10 @@ imagePullSecrets:
 
 resources:
   requests:
-    cpu: 1000m
+    cpu: 200m
     memory: 1Gi
   limits:
+    cpu: 750m
     memory: 1280Mi
 
 ports:
@@ -108,3 +109,22 @@ ingress:
       pathType: Prefix
     - path: /api/v1/push
       pathType: Prefix
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 100
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 30
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
