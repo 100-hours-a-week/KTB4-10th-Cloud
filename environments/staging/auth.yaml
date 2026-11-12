@@ -100,7 +100,7 @@ autoscaling:
   enabled: true
   minReplicas: 2
   maxReplicas: 3
-  targetCPUUtilizationPercentage: 100
+  targetCPUUtilizationPercentage: 200
   behavior:
     scaleUp:
       stabilizationWindowSeconds: 0
