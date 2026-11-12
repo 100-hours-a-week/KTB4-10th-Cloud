@@ -1,0 +1,133 @@
+---
+fullnameOverride: alloy
+crds:
+  create: false
+controller:
+  type: deployment
+  replicas: 1
+alloy:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 384Mi
+  configMap:
+    content: |
+      logging { level = "warn" }
+
+      discovery.kubernetes "backend" {
+        role = "pod"
+        namespaces { names = ["auth", "guidebook", "kgb-ops"] }
+      }
+      discovery.relabel "backend" {
+        targets = discovery.kubernetes.backend.targets
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_port_name"]
+          regex = "management"
+          action = "keep"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_phase"]
+          regex = "Running"
+          action = "keep"
+        }
+        rule {
+          target_label = "__metrics_path__"
+          replacement = "/actuator/prometheus"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label = "namespace"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label = "pod"
+        }
+        rule {
+          target_label = "job"
+          replacement = "eks-backend"
+        }
+      }
+      prometheus.scrape "backend" {
+        targets = discovery.relabel.backend.output
+        scrape_interval = "30s"
+        forward_to = [prometheus.remote_write.staging.receiver]
+      }
+
+      discovery.kubernetes "nodes" { role = "node" }
+      discovery.relabel "cadvisor" {
+        targets = discovery.kubernetes.nodes.targets
+        rule {
+          source_labels = ["__meta_kubernetes_node_name"]
+          target_label = "node"
+        }
+        rule {
+          target_label = "__address__"
+          replacement = "kubernetes.default.svc:443"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_node_name"]
+          regex = "(.+)"
+          target_label = "__metrics_path__"
+          replacement = "/api/v1/nodes/$1/proxy/metrics/cadvisor"
+        }
+        rule {
+          target_label = "job"
+          replacement = "eks-cadvisor"
+        }
+      }
+      prometheus.scrape "cadvisor" {
+        targets = discovery.relabel.cadvisor.output
+        scheme = "https"
+        bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+        tls_config { ca_file = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt" }
+        scrape_interval = "30s"
+        forward_to = [prometheus.remote_write.staging.receiver]
+      }
+      prometheus.scrape "state" {
+        targets = [{__address__ = "kube-state-metrics.monitoring.svc.cluster.local:8080", job = "eks-kube-state-metrics"}]
+        scrape_interval = "30s"
+        forward_to = [prometheus.remote_write.staging.receiver]
+      }
+      prometheus.scrape "self" {
+        targets = [{__address__ = "127.0.0.1:12345", job = "eks-alloy"}]
+        scrape_interval = "30s"
+        forward_to = [prometheus.remote_write.staging.receiver]
+      }
+      prometheus.remote_write "staging" {
+        external_labels = {cluster = "kgb-staging-eks", environment = "staging"}
+        endpoint {
+          url = "https://10.0.0.87/api/v1/write"
+          tls_config { server_name = "staging-grafana.kguidebook.site" }
+        }
+      }
+serviceAccount:
+  create: true
+  name: alloy
+rbac:
+  create: true
+  rules:
+  - apiGroups:
+    - ''
+    resources:
+    - pods
+    verbs:
+    - get
+    - list
+    - watch
+  clusterRules:
+  - apiGroups:
+    - ''
+    resources:
+    - nodes
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - ''
+    resources:
+    - nodes/proxy
+    verbs:
+    - get

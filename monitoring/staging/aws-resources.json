@@ -1,0 +1,6 @@
+{
+  "logGroup": "/kgb/staging/eks/application",
+  "retentionInDays": 60,
+  "roleArn": "arn:aws:iam::742875367096:role/kgb-staging-fluent-bit-role",
+  "associationId": "a-fgzzx9rj8p6yay2ud"
+}

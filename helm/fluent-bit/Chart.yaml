@@ -1,0 +1,6 @@
+---
+apiVersion: v2
+name: fluent-bit
+description: KGB application logs to CloudWatch using AWS for Fluent Bit
+type: application
+version: 0.1.0

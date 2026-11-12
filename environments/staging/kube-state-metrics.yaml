@@ -1,0 +1,18 @@
+---
+fullnameOverride: kube-state-metrics
+collectors:
+- nodes
+- namespaces
+- pods
+- deployments
+- replicasets
+- statefulsets
+- daemonsets
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 192Mi
+metricLabelsAllowlist:
+- pods=[app.kubernetes.io/name,app.kubernetes.io/instance]

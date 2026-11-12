@@ -1,0 +1,77 @@
+---
+serviceAccount:
+  create: true
+  name: fluent-bit
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+volumes:
+- name: varlog
+  hostPath:
+    path: "/var/log"
+    type: Directory
+- name: state
+  hostPath:
+    path: "/var/fluent-bit/state"
+    type: DirectoryOrCreate
+volumeMounts:
+- name: varlog
+  mountPath: "/var/log"
+  readOnly: true
+- name: state
+  mountPath: "/var/fluent-bit/state"
+tolerations:
+- operator: Exists
+config: |
+  [SERVICE]
+      HTTP_Server On
+      HTTP_Listen 0.0.0.0
+      HTTP_Port 2020
+      Health_Check On
+      storage.path /var/fluent-bit/state/storage
+      storage.backlog.mem_limit 5M
+      Parsers_File /fluent-bit/parsers/parsers.conf
+  [INPUT]
+      Name              tail
+      Tag               kube.*
+      Path              /var/log/containers/*_auth_*.log,/var/log/containers/*_guidebook_*.log,/var/log/containers/*_kgb-ops_*.log
+      DB                /var/fluent-bit/state/tail.db
+      multiline.parser  docker, cri
+      Mem_Buf_Limit     10MB
+      Skip_Long_Lines   On
+      Refresh_Interval  10
+      Read_from_Head Off
+      storage.type filesystem
+  [FILTER]
+      Name                kubernetes
+      Match               kube.*
+      Kube_URL            https://kubernetes.default.svc.cluster.local:443
+      Merge_Log           Off
+      Merge_Log_Key       data
+      Keep_Log            On
+      K8S-Logging.Parser  Off
+      K8S-Logging.Exclude Off
+      Buffer_Size         32k
+      Labels Off
+      Annotations Off
+  [FILTER]
+      Name record_modifier
+      Match kube.*
+      Record cluster kgb-staging-eks
+      Record environment staging
+  [OUTPUT]
+      Name                  cloudwatch_logs
+      Match                 *
+      region                ap-northeast-2
+      log_group_name        /kgb/staging/eks/application
+      log_stream_prefix     eks-
+      log_stream_template   $kubernetes['namespace_name'].$kubernetes['pod_name'].$kubernetes['container_name']
+      Retry_Limit False
+      storage.total_limit_size 100M
+logNamespaces:
+- auth
+- guidebook
+- kgb-ops

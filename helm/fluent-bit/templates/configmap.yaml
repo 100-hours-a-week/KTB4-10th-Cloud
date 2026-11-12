@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}
+data:
+  fluent-bit.conf: |
+    {{- required "config is required; use an environment values file" .Values.config | nindent 4 }}

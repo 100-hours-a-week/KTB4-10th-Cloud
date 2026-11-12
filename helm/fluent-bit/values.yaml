@@ -1,0 +1,13 @@
+---
+image:
+  repository: public.ecr.aws/aws-observability/aws-for-fluent-bit
+  tag: 3.2.1
+  pullPolicy: IfNotPresent
+serviceAccount:
+  name: fluent-bit
+config: ''
+resources: {}
+volumes: []
+volumeMounts: []
+tolerations: []
+logNamespaces: []

@@ -1,0 +1,25 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-state-metrics
+  namespace: argocd
+spec:
+  project: default
+  sources:
+  - repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-state-metrics
+    targetRevision: 9.0.1
+    helm:
+      releaseName: kube-state-metrics
+      valueFiles:
+      - "$values/environments/staging/kube-state-metrics.yaml"
+  - repoURL: ssh://git@ssh.github.com:443/100-hours-a-week/KTB4-10th-Cloud.git
+    targetRevision: main
+    ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
