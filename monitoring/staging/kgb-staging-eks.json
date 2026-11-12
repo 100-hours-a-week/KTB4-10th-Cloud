@@ -2,424 +2,4074 @@
   "uid": "kgb-staging-eks",
   "title": "KGB Staging EKS",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
+  "editable": false,
   "tags": [
     "kgb",
     "staging",
-    "eks"
+    "eks",
+    "load-test"
   ],
   "timezone": "browser",
-  "refresh": "30s",
   "time": {
-    "from": "now-1h",
+    "from": "now-30m",
     "to": "now"
   },
+  "refresh": "10s",
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "hidden": false
+  },
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [
+    {
+      "title": "Alert rules",
+      "type": "link",
+      "url": "/alerting/list",
+      "targetBlank": true
+    }
+  ],
+  "liveNow": false,
+  "preload": false,
   "templating": {
     "list": [
       {
-        "name": "DS_PROMETHEUS",
-        "type": "datasource",
-        "query": "prometheus",
-        "label": "Prometheus"
-      },
-      {
         "name": "namespace",
+        "label": "서비스",
         "type": "custom",
-        "query": "auth,guidebook,kgb-ops",
-        "includeAll": true,
-        "allValue": ".*",
+        "query": "Auth API : auth,Guidebook API : guidebook,관광데이터 Scheduler : kgb-ops",
         "multi": true,
+        "includeAll": true,
+        "allValue": "auth|guidebook|kgb-ops",
         "current": {
           "text": "All",
           "value": "$__all"
-        }
+        },
+        "options": []
+      },
+      {
+        "name": "pod",
+        "label": "Pod 선택 (상세 이름)",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(up{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\"},pod)",
+          "refId": "PodVariable"
+        },
+        "definition": "Backend Pod",
+        "refresh": 1,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "node",
+        "label": "노드",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(label_replace(label_join(label_replace((label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"auth\",node!=\"\"}),\"node_role\",\"AuthNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"guidebook\",node!=\"\"}),\"node_role\",\"GuidebookNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"kgb-ops\",node!=\"\"}),\"node_role\",\"SchedulerNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"rabbitmq\",node!=\"\"}),\"node_role\",\"RabbitMQNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"kgb-worker\",node!=\"\"}),\"node_role\",\"WorkerNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"argocd\",node!=\"\"}),\"node_role\",\"ArgoCDNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"monitoring\",node!=\"\"}),\"node_role\",\"MonitoringNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_node_info{cluster=\"kgb-staging-eks\"}),\"node_role\",\"SystemNode\",\"node\",\".*\")),\"node_prefix\",\"$1\",\"node\",\"(i-[a-z0-9]{4}).*\"),\"node_display\",\"(\",\"node_prefix\",\"node_role\"),\"node_display\",\"$1)\",\"node_display\",\"(.*)\"))",
+          "refId": "NodeVariable"
+        },
+        "refresh": 1,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": [],
+        "regex": "/node=\"(?<value>[^\"]+)\"|node_display=\"(?<text>[^\"]+)\"/g"
       }
     ]
   },
   "panels": [
     {
-      "id": 1,
-      "type": "timeseries",
-      "title": "Backend scrape health",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
+      "id": 1000,
+      "type": "row",
+      "title": "Target Status",
+      "collapsed": false,
       "gridPos": {
         "x": 0,
         "y": 0,
-        "w": 12,
-        "h": 8
+        "w": 24,
+        "h": 1
       },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "up{cluster=\"kgb-staging-eks\",job=\"eks-backend\"}",
-          "legendFormat": "{{namespace}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
+      "panels": []
     },
     {
       "id": 2,
-      "type": "timeseries",
-      "title": "API requests/s",
+      "title": "Backend metrics targets",
+      "description": "",
+      "links": [],
+      "type": "stat",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "max": 1,
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "DOWN",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "UP",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "red"
+              },
+              {
+                "value": 1,
+                "color": "green"
+              }
+            ]
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "gridPos": {
-        "x": 12,
-        "y": 0,
-        "w": 12,
-        "h": 8
+        "x": 0,
+        "y": 1,
+        "w": 6,
+        "h": 4
       },
       "targets": [
         {
+          "editorMode": "code",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(up{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\"},\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}}",
+          "range": true,
           "refId": "A",
-          "expr": "sum by(namespace)(rate(http_server_requests_seconds_count{cluster=\"kgb-staging-eks\",namespace=~\"$namespace\"}[5m]))",
-          "legendFormat": "{{namespace}}"
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
         }
       ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
+      "transformations": []
     },
     {
       "id": 3,
-      "type": "timeseries",
-      "title": "API p95 latency",
+      "title": "EKS Node Ready",
+      "description": "노드 이름 괄호에는 현재 배치된 대표 워크로드를 표시합니다. 한 노드에서 여러 역할이 실행될 경우 Auth→Guidebook→Scheduler→RabbitMQ→Worker→ArgoCD→Monitoring 순서로 대표 역할을 표시합니다. 실제 노드 이름이나 배치 정책을 변경하지 않습니다.",
+      "links": [],
+      "type": "stat",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "max": 1,
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "DOWN",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "UP",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "red"
+              },
+              {
+                "value": 1,
+                "color": "green"
+              }
+            ]
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "gridPos": {
-        "x": 0,
-        "y": 8,
-        "w": 12,
-        "h": 8
+        "x": 6,
+        "y": 1,
+        "w": 6,
+        "h": 4
       },
       "targets": [
         {
+          "editorMode": "code",
+          "expr": "(kube_node_status_condition{cluster=\"kgb-staging-eks\",node=~\"${node:regex}\",condition=\"Ready\",status=\"true\"}) * on(node) group_left(node_display) (label_replace(label_join(label_replace((label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"auth\",node!=\"\"}),\"node_role\",\"AuthNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"guidebook\",node!=\"\"}),\"node_role\",\"GuidebookNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"kgb-ops\",node!=\"\"}),\"node_role\",\"SchedulerNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"rabbitmq\",node!=\"\"}),\"node_role\",\"RabbitMQNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"kgb-worker\",node!=\"\"}),\"node_role\",\"WorkerNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"argocd\",node!=\"\"}),\"node_role\",\"ArgoCDNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"monitoring\",node!=\"\"}),\"node_role\",\"MonitoringNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_node_info{cluster=\"kgb-staging-eks\"}),\"node_role\",\"SystemNode\",\"node\",\".*\")),\"node_prefix\",\"$1\",\"node\",\"(i-[a-z0-9]{4}).*\"),\"node_display\",\"(\",\"node_prefix\",\"node_role\"),\"node_display\",\"$1)\",\"node_display\",\"(.*)\"))",
+          "legendFormat": "{{node_display}}",
+          "range": true,
           "refId": "A",
-          "expr": "histogram_quantile(0.95,sum by(le,namespace)(rate(http_server_requests_seconds_bucket{cluster=\"kgb-staging-eks\",namespace=~\"$namespace\"}[5m])))",
-          "legendFormat": "{{namespace}}"
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
         }
       ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
+      "transformations": []
     },
     {
       "id": 4,
-      "type": "timeseries",
-      "title": "HTTP 5xx/s",
+      "title": "MySQL Exporter Target",
+      "description": "",
+      "links": [],
+      "type": "stat",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "max": 1,
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "DOWN",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "UP",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "red"
+              },
+              {
+                "value": 1,
+                "color": "green"
+              }
+            ]
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "x": 12,
-        "y": 8,
-        "w": 12,
-        "h": 8
+        "y": 1,
+        "w": 6,
+        "h": 4
       },
       "targets": [
         {
+          "editorMode": "code",
+          "expr": "up{job=\"mysql\"}",
+          "legendFormat": "mysql",
+          "range": true,
           "refId": "A",
-          "expr": "sum by(namespace)(rate(http_server_requests_seconds_count{cluster=\"kgb-staging-eks\",namespace=~\"$namespace\",status=~\"5..\"}[5m]))",
-          "legendFormat": "{{namespace}}"
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
         }
       ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
+      "transformations": []
     },
     {
       "id": 5,
-      "type": "timeseries",
-      "title": "Pod CPU cores",
+      "title": "Existing AI HTTP target",
+      "description": "기존 AI HTTP 수집 대상입니다. EKS Worker 상태를 나타내지 않습니다.",
+      "links": [],
+      "type": "stat",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "max": 1,
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "DOWN",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "UP",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "red"
+              },
+              {
+                "value": 1,
+                "color": "green"
+              }
+            ]
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "up{job=\"ai\"}",
+          "legendFormat": "ai",
+          "range": true,
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 1002,
+      "type": "row",
+      "title": "Backend HTTP",
+      "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 16,
-        "w": 12,
-        "h": 8
+        "y": 5,
+        "w": 24,
+        "h": 1
       },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by(namespace)(rate(container_cpu_usage_seconds_total{cluster=\"kgb-staging-eks\",namespace=~\"$namespace\",container!=\"\"}[5m]))",
-          "legendFormat": "{{namespace}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 6,
-      "type": "timeseries",
-      "title": "Pod working memory",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 16,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by(namespace)(container_memory_working_set_bytes{cluster=\"kgb-staging-eks\",namespace=~\"$namespace\",container!=\"\"})",
-          "legendFormat": "{{namespace}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 7,
-      "type": "timeseries",
-      "title": "JVM heap used",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 24,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by(namespace)(jvm_memory_used_bytes{cluster=\"kgb-staging-eks\",namespace=~\"$namespace\",area=\"heap\"})",
-          "legendFormat": "{{namespace}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 8,
-      "type": "timeseries",
-      "title": "DB connection waiters",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 24,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by(namespace)(hikaricp_connections_pending{cluster=\"kgb-staging-eks\",namespace=~\"$namespace\"})",
-          "legendFormat": "{{namespace}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 9,
-      "type": "timeseries",
-      "title": "Pod readiness",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 32,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "kube_pod_status_ready{cluster=\"kgb-staging-eks\",namespace=~\"$namespace\",condition=\"true\"}",
-          "legendFormat": "{{pod}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 10,
-      "type": "timeseries",
-      "title": "Container restarts (10m)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 32,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by(pod)(increase(kube_pod_container_status_restarts_total{cluster=\"kgb-staging-eks\",namespace=~\"$namespace\"}[10m]))",
-          "legendFormat": "{{pod}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
+      "panels": []
     },
     {
       "id": 11,
-      "type": "timeseries",
-      "title": "Node ready",
+      "title": "Backend RPS",
+      "description": "",
+      "links": [],
+      "type": "stat",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "x": 0,
-        "y": 40,
-        "w": 12,
-        "h": 8
+        "y": 6,
+        "w": 4,
+        "h": 4
       },
       "targets": [
         {
+          "editorMode": "code",
+          "expr": "sum(rate(http_server_requests_seconds_count{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])) or vector(0)",
+          "legendFormat": "RPS",
+          "range": true,
           "refId": "A",
-          "expr": "kube_node_status_condition{cluster=\"kgb-staging-eks\",condition=\"Ready\",status=\"true\"}",
-          "legendFormat": "{{node}}"
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
         }
       ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
+      "transformations": []
     },
     {
       "id": 12,
-      "type": "timeseries",
-      "title": "Node allocatable CPU",
+      "title": "Backend 4xx Rate",
+      "description": "",
+      "links": [],
+      "type": "stat",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 4,
+        "y": 6,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "100 * (sum(rate(http_server_requests_seconds_count{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",status=~\"4..\",uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])) or (0 * sum(rate(http_server_requests_seconds_count{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])))) / clamp_min(sum(rate(http_server_requests_seconds_count{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])),0.000001)",
+          "legendFormat": "4xx",
+          "range": true,
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 13,
+      "title": "Backend 5xx Rate",
+      "description": "",
+      "links": [],
+      "type": "stat",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 6,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "100 * (sum(rate(http_server_requests_seconds_count{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",status=~\"5..\",uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])) or (0 * sum(rate(http_server_requests_seconds_count{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])))) / clamp_min(sum(rate(http_server_requests_seconds_count{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])),0.000001)",
+          "legendFormat": "5xx",
+          "range": true,
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 14,
+      "title": "Backend Mean Latency",
+      "description": "",
+      "links": [],
+      "type": "stat",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "gridPos": {
         "x": 12,
-        "y": 40,
-        "w": 12,
+        "y": 6,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "(sum(rate(http_server_requests_seconds_sum{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])) / clamp_min(sum(rate(http_server_requests_seconds_count{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])), 0.000001))",
+          "legendFormat": "Mean",
+          "range": true,
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 15,
+      "title": "Backend Max Latency",
+      "description": "",
+      "links": [],
+      "type": "stat",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 6,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "max(http_server_requests_seconds_max{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",uri!~\"/actuator.*|UNKNOWN\"})",
+          "legendFormat": "Max",
+          "range": true,
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 16,
+      "title": "Backend p50 / p90 / p95 / p99",
+      "description": "p50·p90·p95·p99는 해당 시간대 요청이 없으면 N/A로 표시됩니다. 0ms 응답을 의미하지 않습니다.",
+      "links": [],
+      "type": "stat",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 20,
+        "y": 6,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(http_server_requests_seconds_bucket{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])))",
+          "legendFormat": "p50",
+          "range": true,
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        },
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.9, sum by (le) (rate(http_server_requests_seconds_bucket{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])))",
+          "legendFormat": "p90",
+          "range": true,
+          "refId": "B",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        },
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])))",
+          "legendFormat": "p95",
+          "range": true,
+          "refId": "C",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        },
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])))",
+          "legendFormat": "p99",
+          "range": true,
+          "refId": "D",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 17,
+      "title": "Backend Requests by Status",
+      "description": "",
+      "links": [],
+      "type": "timeseries",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 8,
         "h": 8
       },
       "targets": [
         {
+          "editorMode": "code",
+          "expr": "sum by (status) (rate(http_server_requests_seconds_count{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval]))",
+          "legendFormat": "{{status}}",
+          "range": true,
           "refId": "A",
-          "expr": "kube_node_status_allocatable{cluster=\"kgb-staging-eks\",resource=\"cpu\",unit=\"core\"}",
-          "legendFormat": "{{node}}"
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
         }
       ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
+      "transformations": []
+    },
+    {
+      "id": 18,
+      "title": "Top Backend Endpoints — RPS",
+      "description": "",
+      "links": [],
+      "type": "timeseries",
+      "pluginVersion": "13.2.3",
       "options": {
         "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
         }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 10,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "topk(10, sum by (method, uri) (rate(http_server_requests_seconds_count{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])))",
+          "legendFormat": "{{method}} {{uri}}",
+          "range": true,
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 19,
+      "title": "Backend Endpoint Latency — Mean / P95 / P99",
+      "description": "p50·p90·p95·p99는 해당 시간대 요청이 없으면 N/A로 표시됩니다. 0ms 응답을 의미하지 않습니다.",
+      "links": [],
+      "type": "timeseries",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 10,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "topk(10, sum by (method, uri) (rate(http_server_requests_seconds_sum{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])) / clamp_min(sum by (method, uri) (rate(http_server_requests_seconds_count{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])), 0.000001))",
+          "legendFormat": "Mean {{method}} {{uri}}",
+          "range": true,
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        },
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le, method, uri) (rate(http_server_requests_seconds_bucket{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])))",
+          "legendFormat": "P95 {{method}} {{uri}}",
+          "range": true,
+          "refId": "B",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        },
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum by (le, method, uri) (rate(http_server_requests_seconds_bucket{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])))",
+          "legendFormat": "P99 {{method}} {{uri}}",
+          "range": true,
+          "refId": "C",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 1003,
+      "type": "row",
+      "title": "JVM / Connection Pool",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 21,
+      "title": "JVM Heap Utilization by Pod",
+      "description": "Pod에서 실행 중인 JVM의 힙 사용률입니다. 이름 끝 5글자는 Pod를 구분하는 식별자이며 CPU/메모리 한도와 다릅니다.",
+      "links": [],
+      "type": "gauge",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "barShape": "flat",
+        "barWidthFactor": 0.5,
+        "effects": {
+          "barGlow": false,
+          "centerGlow": false,
+          "gradient": false
+        },
+        "endpointMarker": "point",
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "segmentCount": 1,
+        "segmentSpacing": 0.3,
+        "shape": "gauge",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": false,
+        "sizing": "auto",
+        "sparkline": false,
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 75,
+                "color": "yellow"
+              },
+              {
+                "value": 90,
+                "color": "red"
+              }
+            ]
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 19,
+        "w": 6,
+        "h": 7
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(100 * sum by (namespace,pod)(jvm_memory_used_bytes{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",area=\"heap\"}) / clamp_min(sum by (namespace,pod)(jvm_memory_max_bytes{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",area=\"heap\"} > 0), 1),\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}}",
+          "range": true,
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 22,
+      "title": "JVM Heap Used / Max by Pod",
+      "description": "Instance labels show the AWS EC2 Name tag and availability zone.",
+      "links": [],
+      "type": "timeseries",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 19,
+        "w": 6,
+        "h": 7
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(sum by (namespace,pod)(jvm_memory_used_bytes{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",area=\"heap\"}),\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}} | Used",
+          "range": true,
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        },
+        {
+          "editorMode": "code",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(sum by (namespace,pod)(jvm_memory_max_bytes{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",area=\"heap\"} > 0),\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}} | Max",
+          "range": true,
+          "refId": "B",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 23,
+      "title": "JVM GC Pause",
+      "description": "Pause seconds/s와 Pauses/s는 단위가 다릅니다. Pauses/s는 오른쪽 축으로 표시합니다.",
+      "links": [],
+      "type": "timeseries",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "noValue": "N/A"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*Pauses/s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ops"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          }
+        ]
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 19,
+        "w": 6,
+        "h": 7
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(rate(jvm_gc_pause_seconds_sum{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\"}[$__rate_interval]),\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}} | Pause seconds/s",
+          "range": true,
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        },
+        {
+          "editorMode": "code",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(rate(jvm_gc_pause_seconds_count{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\"}[$__rate_interval]),\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}} | Pauses/s",
+          "range": true,
+          "refId": "B",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 24,
+      "title": "JVM Threads",
+      "description": "",
+      "links": [],
+      "type": "timeseries",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 19,
+        "w": 6,
+        "h": 7
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(jvm_threads_live_threads{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\"},\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}} | Live",
+          "range": true,
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        },
+        {
+          "editorMode": "code",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(jvm_threads_daemon_threads{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\"},\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}} | Daemon",
+          "range": true,
+          "refId": "B",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        },
+        {
+          "editorMode": "code",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(jvm_threads_peak_threads{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\"},\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}} | Peak",
+          "range": true,
+          "refId": "C",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 25,
+      "title": "HikariCP Connections",
+      "description": "",
+      "links": [],
+      "type": "timeseries",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(hikaricp_connections_active{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\"},\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}} | Active",
+          "range": true,
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        },
+        {
+          "editorMode": "code",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(hikaricp_connections_pending{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\"},\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}} | Pending",
+          "range": true,
+          "refId": "B",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        },
+        {
+          "editorMode": "code",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(hikaricp_connections_max{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\"},\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}} | Max",
+          "range": true,
+          "refId": "C",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        },
+        {
+          "editorMode": "code",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(hikaricp_connections_idle{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\"},\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}} | Idle",
+          "range": true,
+          "refId": "D",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        },
+        {
+          "editorMode": "code",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(hikaricp_connections{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\"},\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}} | Total",
+          "range": true,
+          "refId": "E",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 26,
+      "title": "Backend Process CPU",
+      "description": "",
+      "links": [],
+      "type": "timeseries",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 26,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(100 * process_cpu_usage{cluster=\"kgb-staging-eks\",job=\"eks-backend\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\"},\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}} | Process CPU",
+          "range": true,
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 1100,
+      "type": "row",
+      "title": "EKS Pod Resources & Availability",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 33,
+        "w": 24,
+        "h": 1
       }
+    },
+    {
+      "id": 201,
+      "title": "Pod CPU cores",
+      "description": "",
+      "links": [],
+      "type": "timeseries",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cores",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "noValue": "N/A",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(sum by(namespace,pod)(rate(container_cpu_usage_seconds_total{cluster=\"kgb-staging-eks\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",container!=\"\",container!=\"POD\"}[$__rate_interval])),\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}}",
+          "range": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 202,
+      "title": "Pod CPU usage / request",
+      "description": "CPU requests 대비 사용률이며 CPU 한도가 아닙니다. 100%를 넘을 수 있습니다.",
+      "links": [],
+      "type": "timeseries",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "noValue": "N/A",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 34,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(100 * sum by(namespace,pod)(rate(container_cpu_usage_seconds_total{cluster=\"kgb-staging-eks\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",container!=\"\",container!=\"POD\"}[$__rate_interval])) / on(namespace,pod) sum by(namespace,pod)(kube_pod_container_resource_requests{cluster=\"kgb-staging-eks\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",resource=\"cpu\",unit=\"core\"} > 0),\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}}",
+          "range": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 203,
+      "title": "Pod working memory / limit",
+      "description": "",
+      "links": [],
+      "type": "timeseries",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "noValue": "N/A",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 41,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(sum by(namespace,pod)(container_memory_working_set_bytes{cluster=\"kgb-staging-eks\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",container!=\"\",container!=\"POD\"}),\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}} | used",
+          "range": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        },
+        {
+          "refId": "B",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(sum by(namespace,pod)(kube_pod_container_resource_limits{cluster=\"kgb-staging-eks\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",resource=\"memory\",unit=\"byte\"}),\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}} | limit",
+          "range": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 204,
+      "title": "Pod memory usage / limit",
+      "description": "",
+      "links": [],
+      "type": "timeseries",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "noValue": "N/A",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 41,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(100 * sum by(namespace,pod)(container_memory_working_set_bytes{cluster=\"kgb-staging-eks\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",container!=\"\",container!=\"POD\"}) / on(namespace,pod) sum by(namespace,pod)(kube_pod_container_resource_limits{cluster=\"kgb-staging-eks\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\",resource=\"memory\",unit=\"byte\"} > 0),\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}}",
+          "range": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 205,
+      "title": "Deployment available / desired",
+      "description": "",
+      "links": [],
+      "type": "timeseries",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "noValue": "N/A",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(kube_deployment_status_replicas_available{cluster=\"kgb-staging-eks\",namespace=~\"${namespace:regex}\"},\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\")",
+          "legendFormat": "{{workload}} | available",
+          "range": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        },
+        {
+          "refId": "B",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(kube_deployment_spec_replicas{cluster=\"kgb-staging-eks\",namespace=~\"${namespace:regex}\"},\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\")",
+          "legendFormat": "{{workload}} | desired",
+          "range": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 206,
+      "title": "Container restarts (10m)",
+      "description": "",
+      "links": [],
+      "type": "timeseries",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "noValue": "N/A",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 48,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(sum by(namespace,pod)(increase(kube_pod_container_status_restarts_total{cluster=\"kgb-staging-eks\",namespace=~\"${namespace:regex}\",pod=~\"${pod:regex}\"}[10m])),\"workload\",\"Auth API\",\"namespace\",\"auth\"),\"workload\",\"Guidebook API\",\"namespace\",\"guidebook\"),\"workload\",\"관광데이터 Scheduler\",\"namespace\",\"kgb-ops\"),\"workload\",\"배포 관리 Argo CD\",\"namespace\",\"argocd\"),\"workload\",\"Secret 동기화 ESO\",\"namespace\",\"external-secrets\"),\"workload\",\"지표·로그 수집\",\"namespace\",\"monitoring\"),\"workload\",\"RabbitMQ\",\"namespace\",\"rabbitmq\"),\"workload\",\"AI Worker\",\"namespace\",\"kgb-worker\"),\"workload\",\"Kubernetes 시스템\",\"namespace\",\"kube-system\"),\"pod_short\",\"$1\",\"pod\",\".*-([^-]+)$\")",
+          "legendFormat": "{{workload}} · {{pod_short}}",
+          "range": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 1001,
+      "type": "row",
+      "title": "EKS Node System",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 55,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 7,
+      "title": "Node CPU Usage",
+      "description": "cAdvisor 루트 cgroup의 CPU 사용량 / Node 전체 CPU 코어 수. Pod requests 비율이 아닙니다. 노드 이름 괄호에는 현재 배치된 대표 워크로드를 표시합니다. 한 노드에서 여러 역할이 실행될 경우 Auth→Guidebook→Scheduler→RabbitMQ→Worker→ArgoCD→Monitoring 순서로 대표 역할을 표시합니다. 실제 노드 이름이나 배치 정책을 변경하지 않습니다.",
+      "links": [],
+      "type": "gauge",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "barShape": "flat",
+        "barWidthFactor": 0.5,
+        "effects": {
+          "barGlow": false,
+          "centerGlow": false,
+          "gradient": false
+        },
+        "endpointMarker": "point",
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "segmentCount": 1,
+        "segmentSpacing": 0.3,
+        "shape": "gauge",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": false,
+        "sizing": "auto",
+        "sparkline": false,
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 75,
+                "color": "yellow"
+              },
+              {
+                "value": 90,
+                "color": "red"
+              }
+            ]
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 56,
+        "w": 6,
+        "h": 7
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "(100 * sum by(node)(rate(container_cpu_usage_seconds_total{cluster=\"kgb-staging-eks\",node=~\"${node:regex}\",id=\"/\"}[$__rate_interval])) / on(node) max by(node)(machine_cpu_cores{cluster=\"kgb-staging-eks\",node=~\"${node:regex}\"})) * on(node) group_left(node_display) (label_replace(label_join(label_replace((label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"auth\",node!=\"\"}),\"node_role\",\"AuthNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"guidebook\",node!=\"\"}),\"node_role\",\"GuidebookNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"kgb-ops\",node!=\"\"}),\"node_role\",\"SchedulerNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"rabbitmq\",node!=\"\"}),\"node_role\",\"RabbitMQNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"kgb-worker\",node!=\"\"}),\"node_role\",\"WorkerNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"argocd\",node!=\"\"}),\"node_role\",\"ArgoCDNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"monitoring\",node!=\"\"}),\"node_role\",\"MonitoringNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_node_info{cluster=\"kgb-staging-eks\"}),\"node_role\",\"SystemNode\",\"node\",\".*\")),\"node_prefix\",\"$1\",\"node\",\"(i-[a-z0-9]{4}).*\"),\"node_display\",\"(\",\"node_prefix\",\"node_role\"),\"node_display\",\"$1)\",\"node_display\",\"(.*)\"))",
+          "legendFormat": "{{node_display}}",
+          "range": true,
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 8,
+      "title": "Node Working Memory",
+      "description": "Node working set / 물리 메모리. 기존 MemAvailable 기반 사용률과 계산 방식이 다릅니다. 노드 이름 괄호에는 현재 배치된 대표 워크로드를 표시합니다. 한 노드에서 여러 역할이 실행될 경우 Auth→Guidebook→Scheduler→RabbitMQ→Worker→ArgoCD→Monitoring 순서로 대표 역할을 표시합니다. 실제 노드 이름이나 배치 정책을 변경하지 않습니다.",
+      "links": [],
+      "type": "gauge",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "barShape": "flat",
+        "barWidthFactor": 0.5,
+        "effects": {
+          "barGlow": false,
+          "centerGlow": false,
+          "gradient": false
+        },
+        "endpointMarker": "point",
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "segmentCount": 1,
+        "segmentSpacing": 0.3,
+        "shape": "gauge",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": false,
+        "sizing": "auto",
+        "sparkline": false,
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 75,
+                "color": "yellow"
+              },
+              {
+                "value": 90,
+                "color": "red"
+              }
+            ]
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 56,
+        "w": 6,
+        "h": 7
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "(100 * max by(node)(container_memory_working_set_bytes{cluster=\"kgb-staging-eks\",node=~\"${node:regex}\",id=\"/\"}) / on(node) max by(node)(machine_memory_bytes{cluster=\"kgb-staging-eks\",node=~\"${node:regex}\"})) * on(node) group_left(node_display) (label_replace(label_join(label_replace((label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"auth\",node!=\"\"}),\"node_role\",\"AuthNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"guidebook\",node!=\"\"}),\"node_role\",\"GuidebookNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"kgb-ops\",node!=\"\"}),\"node_role\",\"SchedulerNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"rabbitmq\",node!=\"\"}),\"node_role\",\"RabbitMQNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"kgb-worker\",node!=\"\"}),\"node_role\",\"WorkerNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"argocd\",node!=\"\"}),\"node_role\",\"ArgoCDNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"monitoring\",node!=\"\"}),\"node_role\",\"MonitoringNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_node_info{cluster=\"kgb-staging-eks\"}),\"node_role\",\"SystemNode\",\"node\",\".*\")),\"node_prefix\",\"$1\",\"node\",\"(i-[a-z0-9]{4}).*\"),\"node_display\",\"(\",\"node_prefix\",\"node_role\"),\"node_display\",\"$1)\",\"node_display\",\"(.*)\"))",
+          "legendFormat": "{{node_display}}",
+          "range": true,
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 9,
+      "title": "Node Network Receive / Transmit",
+      "description": "노드 이름 괄호에는 현재 배치된 대표 워크로드를 표시합니다. 한 노드에서 여러 역할이 실행될 경우 Auth→Guidebook→Scheduler→RabbitMQ→Worker→ArgoCD→Monitoring 순서로 대표 역할을 표시합니다. 실제 노드 이름이나 배치 정책을 변경하지 않습니다.",
+      "links": [],
+      "type": "timeseries",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 56,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "(sum by(node)(rate(container_network_receive_bytes_total{cluster=\"kgb-staging-eks\",node=~\"${node:regex}\",id=\"/\",interface!=\"lo\"}[$__rate_interval]))) * on(node) group_left(node_display) (label_replace(label_join(label_replace((label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"auth\",node!=\"\"}),\"node_role\",\"AuthNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"guidebook\",node!=\"\"}),\"node_role\",\"GuidebookNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"kgb-ops\",node!=\"\"}),\"node_role\",\"SchedulerNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"rabbitmq\",node!=\"\"}),\"node_role\",\"RabbitMQNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"kgb-worker\",node!=\"\"}),\"node_role\",\"WorkerNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"argocd\",node!=\"\"}),\"node_role\",\"ArgoCDNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"monitoring\",node!=\"\"}),\"node_role\",\"MonitoringNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_node_info{cluster=\"kgb-staging-eks\"}),\"node_role\",\"SystemNode\",\"node\",\".*\")),\"node_prefix\",\"$1\",\"node\",\"(i-[a-z0-9]{4}).*\"),\"node_display\",\"(\",\"node_prefix\",\"node_role\"),\"node_display\",\"$1)\",\"node_display\",\"(.*)\"))",
+          "legendFormat": "{{node_display}} | receive",
+          "range": true,
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        },
+        {
+          "editorMode": "code",
+          "expr": "(sum by(node)(rate(container_network_transmit_bytes_total{cluster=\"kgb-staging-eks\",node=~\"${node:regex}\",id=\"/\",interface!=\"lo\"}[$__rate_interval]))) * on(node) group_left(node_display) (label_replace(label_join(label_replace((label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"auth\",node!=\"\"}),\"node_role\",\"AuthNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"guidebook\",node!=\"\"}),\"node_role\",\"GuidebookNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"kgb-ops\",node!=\"\"}),\"node_role\",\"SchedulerNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"rabbitmq\",node!=\"\"}),\"node_role\",\"RabbitMQNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"kgb-worker\",node!=\"\"}),\"node_role\",\"WorkerNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"argocd\",node!=\"\"}),\"node_role\",\"ArgoCDNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_pod_info{cluster=\"kgb-staging-eks\",namespace=\"monitoring\",node!=\"\"}),\"node_role\",\"MonitoringNode\",\"node\",\".*\") or on(node) label_replace(max by(node)(kube_node_info{cluster=\"kgb-staging-eks\"}),\"node_role\",\"SystemNode\",\"node\",\".*\")),\"node_prefix\",\"$1\",\"node\",\"(i-[a-z0-9]{4}).*\"),\"node_display\",\"(\",\"node_prefix\",\"node_role\"),\"node_display\",\"$1)\",\"node_display\",\"(.*)\"))",
+          "legendFormat": "{{node_display}} | transmit",
+          "range": true,
+          "refId": "B",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "interval": "30s"
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 1004,
+      "type": "row",
+      "title": "MySQL",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 63,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 28,
+      "title": "MySQL Connections",
+      "description": "",
+      "links": [],
+      "type": "timeseries",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 64,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "mysql_global_status_threads_connected{job=\"mysql\"}",
+          "legendFormat": "Connected",
+          "range": true,
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "editorMode": "code",
+          "expr": "mysql_global_status_threads_running{job=\"mysql\"}",
+          "legendFormat": "Running",
+          "range": true,
+          "refId": "B",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "editorMode": "code",
+          "expr": "mysql_global_variables_max_connections{job=\"mysql\"}",
+          "legendFormat": "Max",
+          "range": true,
+          "refId": "C",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 29,
+      "title": "MySQL Query Rate",
+      "description": "",
+      "links": [],
+      "type": "timeseries",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 64,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "rate(mysql_global_status_questions{job=\"mysql\"}[$__rate_interval])",
+          "legendFormat": "Questions/s",
+          "range": true,
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "editorMode": "code",
+          "expr": "rate(mysql_global_status_queries{job=\"mysql\"}[$__rate_interval])",
+          "legendFormat": "Queries/s",
+          "range": true,
+          "refId": "B",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 30,
+      "title": "MySQL Slow Query Rate",
+      "description": "",
+      "links": [],
+      "type": "timeseries",
+      "pluginVersion": "13.2.3",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "noValue": "N/A"
+        },
+        "overrides": []
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 64,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "rate(mysql_global_status_slow_queries{job=\"mysql\"}[$__rate_interval])",
+          "legendFormat": "Slow queries/s",
+          "range": true,
+          "refId": "A",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "transformations": []
+    },
+    {
+      "id": 1005,
+      "type": "row",
+      "title": "Existing AI HTTP metrics (reference)",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 72,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [
+        {
+          "id": 32,
+          "title": "AI Generation Jobs Running",
+          "description": "",
+          "links": [],
+          "type": "stat",
+          "pluginVersion": "13.2.3",
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "percentChangeColorMode": "standard",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showPercentChange": false,
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "value": 0,
+                    "color": "green"
+                  },
+                  {
+                    "value": 80,
+                    "color": "red"
+                  }
+                ]
+              },
+              "noValue": "N/A"
+            },
+            "overrides": []
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 73,
+            "w": 12,
+            "h": 7
+          },
+          "targets": [
+            {
+              "editorMode": "code",
+              "expr": "generation_jobs_running{job=\"ai\"}",
+              "legendFormat": "Running",
+              "range": true,
+              "refId": "A",
+              "hide": false,
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            }
+          ],
+          "transformations": []
+        },
+        {
+          "id": 33,
+          "title": "AI Generation Jobs Queued",
+          "description": "",
+          "links": [],
+          "type": "stat",
+          "pluginVersion": "13.2.3",
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "percentChangeColorMode": "standard",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showPercentChange": false,
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "value": 0,
+                    "color": "green"
+                  },
+                  {
+                    "value": 80,
+                    "color": "red"
+                  }
+                ]
+              },
+              "noValue": "N/A"
+            },
+            "overrides": []
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 73,
+            "w": 12,
+            "h": 7
+          },
+          "targets": [
+            {
+              "editorMode": "code",
+              "expr": "generation_jobs_queued{job=\"ai\"}",
+              "legendFormat": "Queued",
+              "range": true,
+              "refId": "A",
+              "hide": false,
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            }
+          ],
+          "transformations": []
+        },
+        {
+          "id": 34,
+          "title": "AI Generation Rate",
+          "description": "",
+          "links": [],
+          "type": "stat",
+          "pluginVersion": "13.2.3",
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "percentChangeColorMode": "standard",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showPercentChange": false,
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ops",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "value": 0,
+                    "color": "green"
+                  },
+                  {
+                    "value": 80,
+                    "color": "red"
+                  }
+                ]
+              },
+              "noValue": "N/A"
+            },
+            "overrides": []
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 80,
+            "w": 12,
+            "h": 7
+          },
+          "targets": [
+            {
+              "editorMode": "code",
+              "expr": "sum(rate(generation_jobs_total{job=\"ai\"}[$__rate_interval])) or vector(0)",
+              "legendFormat": "Jobs/s",
+              "range": true,
+              "refId": "A",
+              "hide": false,
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            }
+          ],
+          "transformations": []
+        },
+        {
+          "id": 35,
+          "title": "AI Generation Duration P95",
+          "description": "",
+          "links": [],
+          "type": "timeseries",
+          "pluginVersion": "13.2.3",
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "value": 0,
+                    "color": "green"
+                  },
+                  {
+                    "value": 80,
+                    "color": "red"
+                  }
+                ]
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "showValues": false,
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "noValue": "N/A"
+            },
+            "overrides": []
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 80,
+            "w": 12,
+            "h": 7
+          },
+          "targets": [
+            {
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(generation_job_duration_seconds_bucket{job=\"ai\"}[$__rate_interval])))",
+              "legendFormat": "P95",
+              "range": true,
+              "refId": "A",
+              "hide": false,
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            }
+          ],
+          "transformations": []
+        },
+        {
+          "id": 36,
+          "title": "AI Post-processing P95",
+          "description": "",
+          "links": [],
+          "type": "timeseries",
+          "pluginVersion": "13.2.3",
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "value": 0,
+                    "color": "green"
+                  },
+                  {
+                    "value": 80,
+                    "color": "red"
+                  }
+                ]
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "showValues": false,
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "noValue": "N/A"
+            },
+            "overrides": []
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 87,
+            "w": 12,
+            "h": 7
+          },
+          "targets": [
+            {
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(post_processing_duration_seconds_bucket{job=\"ai\"}[$__rate_interval])))",
+              "legendFormat": "P95",
+              "range": true,
+              "refId": "A",
+              "hide": false,
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            }
+          ],
+          "transformations": []
+        },
+        {
+          "id": 37,
+          "title": "AI Process CPU",
+          "description": "",
+          "links": [],
+          "type": "timeseries",
+          "pluginVersion": "13.2.3",
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "cores",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "value": 0,
+                    "color": "green"
+                  },
+                  {
+                    "value": 80,
+                    "color": "red"
+                  }
+                ]
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "showValues": false,
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "noValue": "N/A"
+            },
+            "overrides": []
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 87,
+            "w": 12,
+            "h": 7
+          },
+          "targets": [
+            {
+              "editorMode": "code",
+              "expr": "rate(process_cpu_seconds_total{job=\"ai\"}[$__rate_interval])",
+              "legendFormat": "CPU cores",
+              "range": true,
+              "refId": "A",
+              "hide": false,
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            }
+          ],
+          "transformations": []
+        },
+        {
+          "id": 38,
+          "title": "AI Resident Memory",
+          "description": "",
+          "links": [],
+          "type": "timeseries",
+          "pluginVersion": "13.2.3",
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "value": 0,
+                    "color": "green"
+                  },
+                  {
+                    "value": 80,
+                    "color": "red"
+                  }
+                ]
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "showValues": false,
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "noValue": "N/A"
+            },
+            "overrides": []
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 94,
+            "w": 12,
+            "h": 7
+          },
+          "targets": [
+            {
+              "editorMode": "code",
+              "expr": "process_resident_memory_bytes{job=\"ai\"}",
+              "legendFormat": "RSS",
+              "range": true,
+              "refId": "A",
+              "hide": false,
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            }
+          ],
+          "transformations": []
+        }
+      ]
     }
-  ]
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "EKS 지표. 노드 범례에 현재 대표 워크로드를 괄호로 표시합니다."
 }

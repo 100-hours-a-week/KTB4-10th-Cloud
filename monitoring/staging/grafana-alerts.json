@@ -1,0 +1,943 @@
+{
+  "apiVersion": 1,
+  "groups": [
+    {
+      "orgId": 1,
+      "name": "staging-eks",
+      "folder": "KGB Staging EKS",
+      "interval": "1m",
+      "rules": [
+        {
+          "uid": "kgb-stg-api-unavailable",
+          "title": "API Pod unavailable",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "editorMode": "code",
+                "expr": "max by(namespace)(kube_deployment_status_replicas_available{cluster=\"kgb-staging-eks\",namespace=~\"auth|guidebook\"}) or on(namespace) label_replace(vector(0),\"namespace\",\"auth\",\"\",\".*\") or on(namespace) label_replace(vector(0),\"namespace\",\"guidebook\",\"\",\".*\")",
+                "instant": true,
+                "range": false,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "type": "threshold",
+                "expression": "A",
+                "refId": "B",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "query": {
+                      "params": [
+                        "B"
+                      ]
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    },
+                    "evaluator": {
+                      "type": "lt",
+                      "params": [
+                        1
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "for": "2m",
+          "isPaused": false,
+          "labels": {
+            "environment": "staging",
+            "cluster": "kgb-staging-eks",
+            "severity": "critical",
+            "team": "cloud"
+          },
+          "annotations": {
+            "summary": "Auth 또는 Guidebook의 사용 가능한 Pod가 2분 이상 없습니다.",
+            "description": "Deployment/Pod 이벤트와 startup·readiness probe, 애플리케이션 로그를 확인하세요.",
+            "runbook_url": "https://github.com/100-hours-a-week/KTB4-10th-Cloud/blob/main/monitoring/staging/README.md"
+          },
+          "notification_settings": {
+            "receiver": "staging-alerts",
+            "group_by": [
+              "alertname",
+              "namespace"
+            ],
+            "group_wait": "30s",
+            "group_interval": "5m",
+            "repeat_interval": "1h"
+          }
+        },
+        {
+          "uid": "kgb-stg-scheduler-unavailable",
+          "title": "Scheduler Pod unavailable",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "editorMode": "code",
+                "expr": "max by(namespace)(kube_deployment_status_replicas_available{cluster=\"kgb-staging-eks\",namespace=~\"kgb-ops\"}) or on(namespace) label_replace(vector(0),\"namespace\",\"kgb-ops\",\"\",\".*\")",
+                "instant": true,
+                "range": false,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "type": "threshold",
+                "expression": "A",
+                "refId": "B",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "query": {
+                      "params": [
+                        "B"
+                      ]
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    },
+                    "evaluator": {
+                      "type": "lt",
+                      "params": [
+                        1
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "for": "5m",
+          "isPaused": false,
+          "labels": {
+            "environment": "staging",
+            "cluster": "kgb-staging-eks",
+            "severity": "warning",
+            "team": "cloud"
+          },
+          "annotations": {
+            "summary": "Scheduler의 사용 가능한 Pod가 5분 이상 없습니다.",
+            "description": "Pod 상태·로그를 확인하세요. 이 규칙은 수집 작업의 성공 여부를 판단하지 않습니다.",
+            "runbook_url": "https://github.com/100-hours-a-week/KTB4-10th-Cloud/blob/main/monitoring/staging/README.md"
+          },
+          "notification_settings": {
+            "receiver": "staging-alerts",
+            "group_by": [
+              "alertname",
+              "namespace"
+            ],
+            "group_wait": "30s",
+            "group_interval": "5m",
+            "repeat_interval": "4h"
+          }
+        },
+        {
+          "uid": "kgb-stg-http-5xx",
+          "title": "API HTTP 5xx increased",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "editorMode": "code",
+                "expr": "((sum by(namespace)(increase(http_server_requests_seconds_count{cluster=\"kgb-staging-eks\",namespace=~\"auth|guidebook\",uri!~\"/actuator.*\",status=~\"5..\"}[5m])) or on(namespace) (0 * sum by(namespace)(increase(http_server_requests_seconds_count{cluster=\"kgb-staging-eks\",namespace=~\"auth|guidebook\",uri!~\"/actuator.*\"}[5m])))) / clamp_min(sum by(namespace)(increase(http_server_requests_seconds_count{cluster=\"kgb-staging-eks\",namespace=~\"auth|guidebook\",uri!~\"/actuator.*\"}[5m])),1)) * on(namespace) (sum by(namespace)(increase(http_server_requests_seconds_count{cluster=\"kgb-staging-eks\",namespace=~\"auth|guidebook\",uri!~\"/actuator.*\"}[5m])) >= bool 20)",
+                "instant": true,
+                "range": false,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "type": "threshold",
+                "expression": "A",
+                "refId": "B",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "query": {
+                      "params": [
+                        "B"
+                      ]
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    },
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0.05
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "for": "2m",
+          "isPaused": false,
+          "labels": {
+            "environment": "staging",
+            "cluster": "kgb-staging-eks",
+            "severity": "critical",
+            "team": "cloud"
+          },
+          "annotations": {
+            "summary": "최근 5분 요청이 20건 이상이며 5xx 비율이 5%를 초과한 상태가 2분 지속됐습니다.",
+            "description": "Guidebook/Auth 로그와 DB·외부 서비스 상태를 확인하세요. 401·404는 5xx에 포함되지 않습니다.",
+            "runbook_url": "https://github.com/100-hours-a-week/KTB4-10th-Cloud/blob/main/monitoring/staging/README.md"
+          },
+          "notification_settings": {
+            "receiver": "staging-alerts",
+            "group_by": [
+              "alertname",
+              "namespace"
+            ],
+            "group_wait": "30s",
+            "group_interval": "5m",
+            "repeat_interval": "1h"
+          }
+        },
+        {
+          "uid": "kgb-stg-restarts",
+          "title": "Backend container restarting",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "editorMode": "code",
+                "expr": "sum by(namespace,pod,container)(increase(kube_pod_container_status_restarts_total{cluster=\"kgb-staging-eks\",namespace=~\"auth|guidebook|kgb-ops\"}[10m]))",
+                "instant": true,
+                "range": false,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "type": "threshold",
+                "expression": "A",
+                "refId": "B",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "query": {
+                      "params": [
+                        "B"
+                      ]
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    },
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        2.99
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "for": "1m",
+          "isPaused": false,
+          "labels": {
+            "environment": "staging",
+            "cluster": "kgb-staging-eks",
+            "severity": "warning",
+            "team": "cloud"
+          },
+          "annotations": {
+            "summary": "최근 10분 내 컨테이너 재시작이 3회 이상 발생했습니다.",
+            "description": "이전 컨테이너 로그와 OOMKilled·liveness probe 실패 여부를 확인하세요.",
+            "runbook_url": "https://github.com/100-hours-a-week/KTB4-10th-Cloud/blob/main/monitoring/staging/README.md"
+          },
+          "notification_settings": {
+            "receiver": "staging-alerts",
+            "group_by": [
+              "alertname",
+              "namespace"
+            ],
+            "group_wait": "30s",
+            "group_interval": "5m",
+            "repeat_interval": "4h"
+          }
+        },
+        {
+          "uid": "kgb-stg-memory",
+          "title": "Backend memory near limit",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "editorMode": "code",
+                "expr": "max by(namespace,pod,container)(container_memory_working_set_bytes{cluster=\"kgb-staging-eks\",namespace=~\"auth|guidebook|kgb-ops\",container!=\"\",container!=\"POD\"}) / on(namespace,pod,container) max by(namespace,pod,container)(kube_pod_container_resource_limits{cluster=\"kgb-staging-eks\",namespace=~\"auth|guidebook|kgb-ops\",resource=\"memory\",unit=\"byte\"} > 0)",
+                "instant": true,
+                "range": false,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "type": "threshold",
+                "expression": "A",
+                "refId": "B",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "query": {
+                      "params": [
+                        "B"
+                      ]
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    },
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0.9
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "for": "10m",
+          "isPaused": false,
+          "labels": {
+            "environment": "staging",
+            "cluster": "kgb-staging-eks",
+            "severity": "warning",
+            "team": "cloud"
+          },
+          "annotations": {
+            "summary": "메모리 사용량이 컨테이너 한도의 90%를 초과한 상태가 10분 지속됐습니다.",
+            "description": "JVM heap·native 메모리와 최근 부하를 확인하세요. 즉시 한도를 늘리기 전에 원인을 확인하세요.",
+            "runbook_url": "https://github.com/100-hours-a-week/KTB4-10th-Cloud/blob/main/monitoring/staging/README.md"
+          },
+          "notification_settings": {
+            "receiver": "staging-alerts",
+            "group_by": [
+              "alertname",
+              "namespace"
+            ],
+            "group_wait": "30s",
+            "group_interval": "5m",
+            "repeat_interval": "4h"
+          }
+        },
+        {
+          "uid": "kgb-stg-db-pending",
+          "title": "API DB connection wait",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "editorMode": "code",
+                "expr": "max by(namespace)(hikaricp_connections_pending{cluster=\"kgb-staging-eks\",namespace=~\"auth|guidebook\"})",
+                "instant": true,
+                "range": false,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "type": "threshold",
+                "expression": "A",
+                "refId": "B",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "query": {
+                      "params": [
+                        "B"
+                      ]
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    },
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "for": "2m",
+          "isPaused": false,
+          "labels": {
+            "environment": "staging",
+            "cluster": "kgb-staging-eks",
+            "severity": "warning",
+            "team": "cloud"
+          },
+          "annotations": {
+            "summary": "DB 연결을 기다리는 요청이 2분 이상 지속됐습니다.",
+            "description": "Hikari 사용량·RDS 부하·느린 쿼리를 확인하세요.",
+            "runbook_url": "https://github.com/100-hours-a-week/KTB4-10th-Cloud/blob/main/monitoring/staging/README.md"
+          },
+          "notification_settings": {
+            "receiver": "staging-alerts",
+            "group_by": [
+              "alertname",
+              "namespace"
+            ],
+            "group_wait": "30s",
+            "group_interval": "5m",
+            "repeat_interval": "4h"
+          }
+        },
+        {
+          "uid": "kgb-stg-node-notready",
+          "title": "EKS Node not ready",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "editorMode": "code",
+                "expr": "kube_node_status_condition{cluster=\"kgb-staging-eks\",condition=\"Ready\",status=\"true\"}",
+                "instant": true,
+                "range": false,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "type": "threshold",
+                "expression": "A",
+                "refId": "B",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "query": {
+                      "params": [
+                        "B"
+                      ]
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    },
+                    "evaluator": {
+                      "type": "lt",
+                      "params": [
+                        1
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "for": "5m",
+          "isPaused": false,
+          "labels": {
+            "environment": "staging",
+            "cluster": "kgb-staging-eks",
+            "severity": "warning",
+            "team": "cloud"
+          },
+          "annotations": {
+            "summary": "Node NotReady가 5분 이상 지속됐습니다.",
+            "description": "Node 이벤트와 Auto Mode 대체 노드·영향받은 Pod 상태를 확인하세요.",
+            "runbook_url": "https://github.com/100-hours-a-week/KTB4-10th-Cloud/blob/main/monitoring/staging/README.md"
+          },
+          "notification_settings": {
+            "receiver": "staging-alerts",
+            "group_by": [
+              "alertname",
+              "namespace"
+            ],
+            "group_wait": "30s",
+            "group_interval": "5m",
+            "repeat_interval": "4h"
+          }
+        },
+        {
+          "uid": "kgb-stg-metrics-missing",
+          "title": "EKS metrics ingestion missing",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "editorMode": "code",
+                "expr": "(absent_over_time(up{cluster=\"kgb-staging-eks\",job=\"eks-alloy\"}[5m]) or vector(0))",
+                "instant": true,
+                "range": false,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "type": "threshold",
+                "expression": "A",
+                "refId": "B",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "query": {
+                      "params": [
+                        "B"
+                      ]
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    },
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "for": "1m",
+          "isPaused": false,
+          "labels": {
+            "environment": "staging",
+            "cluster": "kgb-staging-eks",
+            "severity": "warning",
+            "team": "cloud"
+          },
+          "annotations": {
+            "summary": "Alloy 지표가 최근 5분 동안 수신되지 않았고 추가 1분간 지속됐습니다.",
+            "description": "Alloy Pod·remote_write·모니터링 서버 연결을 확인하세요. 다른 장애 규칙의 지표도 누락될 수 있습니다.",
+            "runbook_url": "https://github.com/100-hours-a-week/KTB4-10th-Cloud/blob/main/monitoring/staging/README.md"
+          },
+          "notification_settings": {
+            "receiver": "staging-alerts",
+            "group_by": [
+              "alertname",
+              "namespace"
+            ],
+            "group_wait": "30s",
+            "group_interval": "5m",
+            "repeat_interval": "4h"
+          }
+        },
+        {
+          "uid": "kgb-stg-scrape-down",
+          "title": "EKS scrape target unavailable",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "editorMode": "code",
+                "expr": "up{cluster=\"kgb-staging-eks\",job=~\"eks-backend|eks-alloy|eks-kube-state-metrics|eks-cadvisor\"}",
+                "instant": true,
+                "range": false,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "type": "threshold",
+                "expression": "A",
+                "refId": "B",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "query": {
+                      "params": [
+                        "B"
+                      ]
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    },
+                    "evaluator": {
+                      "type": "lt",
+                      "params": [
+                        1
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "for": "5m",
+          "isPaused": false,
+          "labels": {
+            "environment": "staging",
+            "cluster": "kgb-staging-eks",
+            "severity": "warning",
+            "team": "cloud"
+          },
+          "annotations": {
+            "summary": "지표 수집 대상 연결 실패가 5분 이상 지속됐습니다.",
+            "description": "대상 Pod/Node, management 포트·네트워크·수집 권한을 확인하세요.",
+            "runbook_url": "https://github.com/100-hours-a-week/KTB4-10th-Cloud/blob/main/monitoring/staging/README.md"
+          },
+          "notification_settings": {
+            "receiver": "staging-alerts",
+            "group_by": [
+              "alertname",
+              "namespace"
+            ],
+            "group_wait": "30s",
+            "group_interval": "5m",
+            "repeat_interval": "4h"
+          }
+        },
+        {
+          "uid": "kgb-stg-log-agent-down",
+          "title": "Fluent Bit unavailable",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "editorMode": "code",
+                "expr": "kube_daemonset_status_number_unavailable{cluster=\"kgb-staging-eks\",namespace=\"monitoring\",daemonset=\"fluent-bit\"}",
+                "instant": true,
+                "range": false,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "type": "threshold",
+                "expression": "A",
+                "refId": "B",
+                "conditions": [
+                  {
+                    "type": "query",
+                    "query": {
+                      "params": [
+                        "B"
+                      ]
+                    },
+                    "reducer": {
+                      "type": "last",
+                      "params": []
+                    },
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    },
+                    "operator": {
+                      "type": "and"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "for": "5m",
+          "isPaused": false,
+          "labels": {
+            "environment": "staging",
+            "cluster": "kgb-staging-eks",
+            "severity": "warning",
+            "team": "cloud"
+          },
+          "annotations": {
+            "summary": "Fluent Bit Pod가 준비되지 않은 상태가 5분 이상 지속됐습니다.",
+            "description": "로그 수집기 Pod와 CloudWatch 권한·출력 오류를 확인하세요. 이 규칙은 CloudWatch 전달 성공 자체를 검증하지 않습니다.",
+            "runbook_url": "https://github.com/100-hours-a-week/KTB4-10th-Cloud/blob/main/monitoring/staging/README.md"
+          },
+          "notification_settings": {
+            "receiver": "staging-alerts",
+            "group_by": [
+              "alertname",
+              "namespace"
+            ],
+            "group_wait": "30s",
+            "group_interval": "5m",
+            "repeat_interval": "4h"
+          }
+        }
+      ]
+    }
+  ]
+}
