@@ -37,7 +37,7 @@ config: |
   [INPUT]
       Name              tail
       Tag               kube.*
-      Path              /var/log/containers/*_auth_*.log,/var/log/containers/*_guidebook_*.log,/var/log/containers/*_kgb-ops_*.log
+      Path              /var/log/containers/*_auth_*.log,/var/log/containers/*_guidebook_*.log,/var/log/containers/*_kgb-ops_*.log,/var/log/containers/*_rabbitmq_*.log,/var/log/containers/*_kgb-worker_*.log
       DB                /var/fluent-bit/state/tail.db
       multiline.parser  docker, cri
       Mem_Buf_Limit     10MB
@@ -75,3 +75,5 @@ logNamespaces:
 - auth
 - guidebook
 - kgb-ops
+- rabbitmq
+- kgb-worker
